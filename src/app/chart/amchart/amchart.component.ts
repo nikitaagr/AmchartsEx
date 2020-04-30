@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, OnDestroy, ViewChild, Output, EventEmitter } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, OnDestroy, ViewChild, Output, EventEmitter, NgZone } from '@angular/core';
 import { AmChartsService, AmChart } from '@amcharts/amcharts3-angular';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { Observable, Subscription } from 'rxjs';
@@ -31,9 +31,10 @@ export class AmchartComponent implements OnInit {
 
   constructor(
     private cdr: ChangeDetectorRef,
-    private jsonService: JsonService
+    private jsonService: JsonService,
+    private _ngZone: NgZone
   ) {
-
+    window['angularComponentRef'] = { component: this, funcRef: this.adjustBalloon, zone: _ngZone };
   }
 
   ngOnInit() {
@@ -97,13 +98,32 @@ export class AmchartComponent implements OnInit {
   }
 
 
+  adjustBalloon(id: number) {
+    let component = window['angularComponentRef'].component;
+    component.jsonService.broadcastNotification(id); // broadcasting by using service 
+    component.selectShapeEvent.emit(id); // broadcasting by using ngrx
+  }
 
+  generateBalloonHTML(value) {
+    return `Marker ${value.year} <br><b>
+            <span style=\'font-size:15px;\'> ${value.val} </span></b><br>
+            <b>
+              <center>
+                <button type="button" 
+                        onclick="window['angularComponentRef'].zone.run(() => {window['angularComponentRef'].funcRef(${value.row})})">
+                  More info
+                </button>
+              </center>
+            </b>`;
+  }
 
   makeOptions(dataProvider) {
-
     return {
       'type': 'serial',
       'theme': 'none',
+      // "legend": {
+      //   "useGraphSettings": true
+      // },
       'marginTop': 0,
       'marginRight': 80,
       "autoMarginOffset": 20,
@@ -112,9 +132,16 @@ export class AmchartComponent implements OnInit {
       'mouseWheelZoomEnabled': true,
       'mouseWheelScrollEnabled': true,
       "balloon": {
+        "hideBalloonTime": 1000,
+        "disableMouseEvents": false,
+        "fixedPosition": true,
         "drop": true,
-        "borderThickness": 1,
-        "shadowAlpha": 0
+        // "borderThickness": 1,
+        "shadowAlpha": 0,
+        "borderThickness": 3,
+        "horizontalPadding": 17,
+        "offsetX": 50,
+        "offsetY": 8
       },
 
       'valueAxes': [{
@@ -124,32 +151,14 @@ export class AmchartComponent implements OnInit {
         'ignoreAxisWidth': true
 
       }],
-      "series": [{
-        "minBulletDistance": 20,
-        "bullets": [{
-          "type": "CircleBullet",
-          "circle": {
-            "radius": 5
-          }
-        }]
-      }],
+
       'graphs': [{
         'id': 'g1',
-        "balloon": {
-          "hideBalloonTime": 1000,
-          "disableMouseEvents": false,
-          "fixedPosition": true,
-          "drop": true,
-        },
-        'bullets': [{
-          "isDynamic": true
-        }],
-
         "balloonFunction": (obj) => {
           const dataContext = obj.dataContext;
           this.rowData = obj.dataContext;
           if (dataContext.stall === 1) {
-            return `Stall : ${dataContext.stall} , Marker ${dataContext.year}<br><b><span style=\'font-size:15px;\'>${dataContext.val}</span></b><br><center><input type="button" value="More info" onclick="${this.adjustBalloonText(dataContext.row)}"/></center></b>`
+            return this.generateBalloonHTML(dataContext);
           }
         },
         'bullet': 'round',
@@ -215,11 +224,12 @@ export class AmchartComponent implements OnInit {
 
 
   adjustBalloonText(id: number) {
+    console.log("row id", id);
     this.jsonService.broadcastNotification(id); // broadcasting by using service 
     this.selectShapeEvent.emit(id); // broadcasting by using ngrx
-    this.selectShapeEvent.subscribe((emittedVal) => {
-      console.log('This is emitted value' + emittedVal);
-    });
+    // this.selectShapeEvent.subscribe((emittedVal) => {
+    //   console.log('This is emitted value' + emittedVal);
+    // });
     // this.getRowId();
   }
 

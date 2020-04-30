@@ -28,7 +28,7 @@ export class TableComponent implements OnInit {
   ngOnInit() {
     this.newsubscribe = this.tagState$.subscribe((state) => {
       this.chartTag = state;
-      console.log("inside subscribe table", this.chartTag);
+      // console.log("inside subscribe table", this.chartTag);
       if (this.chartTag.id > 0) {
         this.getRowId();
       }
@@ -51,7 +51,7 @@ export class TableComponent implements OnInit {
   }
 
   getRowId() {
-    console.log("inside table", this.chartTag)
+    // console.log("inside table", this.chartTag)
     let scrollIndex: number;
     let obj = this.allEmployees.find(obj => obj.ID == this.chartTag.id);
     scrollIndex = obj.ID;

@@ -15,7 +15,7 @@ export class JsonService {
      * @param newNotification 
      */
     broadcastNotification(newNotification) {
-        // console.log('---service', newNotification)
+        console.log('---service', newNotification)
         this.newAddedNotification.next(newNotification);
     }
 
